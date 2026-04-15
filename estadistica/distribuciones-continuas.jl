@@ -18,7 +18,7 @@ end
 
 # ╔═╡ 8730ee14-2daf-4a9b-9461-693cbd2bdc52
 begin
-using Distributions, StatsPlots, PlutoUI #
+using Distributions, StatsPlots, PlutoUI
 end
 
 # ╔═╡ 8c759a6e-382c-11f1-84e0-c38cddbc3935
