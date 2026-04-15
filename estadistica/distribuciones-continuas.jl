@@ -16,538 +16,150 @@ macro bind(def, element)
     #! format: on
 end
 
-# ╔═╡ 96d9684f-1daa-4309-88a8-d8e54666c82d
+# ╔═╡ 8730ee14-2daf-4a9b-9461-693cbd2bdc52
 begin
-#	using Pkg
-#	paquetes = [
-#		"StatsPlots", "GLM", "DataFrames", "Distributions", 
-#		"PlutoTeachingTools", "PlutoUI"]
-#	Pkg.add(paquetes)
-
-
-	# Las funciones generadas para el Notebook las dejo acá para encontrarlas en
-	# 	un solo lugar
-	
-	using Printf
-	using StatsBase
-	using StatsPlots
-	using GLM
-	using DataFrames
-	using PlutoUI
-	using PlutoTeachingTools
-	set_language!(PlutoTeachingTools.get_language("es"))
-	
-	function generar_poblacion(n, μₓ, σₓ, σₑ)
-		# Para evitar cargar Distributions, uso Base.randn que, aunque es menos
-		# 	legible, me ahorro la descarga. Por cuestion de legibilidad, en el 
-		# 	cuaderno se presentará con Distributions.jl
-		# x ~ N(μₓ, σₓ²)
-		x = randn(n) * σₓ .+ μₓ
-
-		# ε ~ N(0, σₑ²)
-		ε = randn(n) * σₑ
-
-		# relación verdadera: Y = 3 + 1 ⋅ X + ε
-		y = 3 .+ x + ε
-
-		return DataFrame(; x, ε, y)
-	end
-
-	PlutoUI.TableOfContents(title = "📚 Contenidos")
+using Distributions, StatsPlots, PlutoUI
 end
 
-# ╔═╡ 0fb9b39c-9fc8-4659-bd31-a53e28ea0035
+# ╔═╡ 8c759a6e-382c-11f1-84e0-c38cddbc3935
+md"# Distribuciones continuas"
+
+# ╔═╡ 2add8de8-1822-444a-a1e7-692d58bbeae5
+md"## Carga de paquetes"
+
+# ╔═╡ 469ea16e-2cef-48c1-8c6e-32d182cb5a4f
+md"## Distribución normal"
+
+# ╔═╡ 90ca68cc-0901-49dc-b5a8-a792fe87fd2f
+md"Media (μ): $(@bind mu Slider(-3.0:0.1:3.0, default=0.0, show_value=true))"
+
+# ╔═╡ 72627f6f-4fab-4026-b7fd-0303922c4ef0
+md"Desviación estándar (σ): $(@bind sigma Slider(0.5:0.01:3.0, default=1.0, show_value=true))"
+
+# ╔═╡ a44abb2b-0432-4292-81d6-7328aca816f9
 md"""
-# Demostración de la insesgadez del estimador de mínimos cuadrados ordinarios (MCO)
-"""
-
-# ╔═╡ c73a95bb-7520-4dd2-a756-2ea4e428f88b
-md"""🔄 *Reiniciar cuaderno* $(@bind reset_nb CounterButton("Reiniciar"))"""
-
-# ╔═╡ 7a92b92e-25fc-4fcd-8a3a-510cfe419006
-begin
-	reset_nb
-	md"""
-	*Por defecto:*
-	- *Mostrar los comentarios en todo el código (se puede activar o desactivar individualmente) $(@bind mostrar_comentarios Switch())*
-	"""
-end
-
-# ╔═╡ 811a97ae-64d4-4243-afd5-ba322a4472b5
-md"""
-Este cuaderno usa `Julia` y `Pluto.jl` para comprobar que los estimadores MCO son insesgados. Para hacer uso de la interactividad es necesario tener Julia instalado y abrir el cuaderno con Pluto.
-
-Las librerías necesarias para empezar a trabajar son las siguientes:
-"""
-
-# ╔═╡ 34c6f27f-c56e-4409-bdf6-d5f543fdff6f
-md"📎 *Mostrar comentarios en el código* $(@bind comentarios_paquetes Switch(default = mostrar_comentarios))"
-
-# ╔═╡ d1cbe04e-c09e-48b2-97ca-7eb0dce7e3f6
-if comentarios_paquetes 
-	md"""
-	```julia
-	using StatsBase  	# Para usar sample() y tomar muestras.
-	using StatsPlots 	# Para los gráficos.
-	using GLM 			# Para determinar el modelo de regresión.
-	using DataFrames 	# Para trabajar los datos más comodamente.
-	using Distributions # Para utilizar la distribucion Normal(μ, σ).
-	```
-	"""
-else
-	md"""
-	```julia
-	using StatsBase
-	using StatsPlots
-	using GLM
-	using DataFrames
-	using Distributions
-	```
-	"""
-end
-
-# ╔═╡ 0e524340-6ce7-4405-a1ef-247a675cde9f
-md"📎 *Mostrar comentarios en el código* $(@bind comentarios_generar_poblacion Switch(default = mostrar_comentarios))"
-
-# ╔═╡ 563fed55-8802-407c-ac93-85f56c717ea4
-if comentarios_generar_poblacion
-	md"""
-	```julia
-	function generar_poblacion(n, μₓ, σₓ, σₑ)		
-		# Se toma una muestra aleatoria de tamaño n de una distribución normal 
-		# 	con media μₓ y desviación estándar σₓ para generar las abscisas de
-		# 	los puntos.
-		# x ~ N(μₓ, σₓ²)
-		x = rand(Normal(μₓ, σₓ), n)
-
-		# Se toma una muestra aleatoria de tamaño n de una distribución normal
-		# 	con media 0 y desviación estándar σₑ para generar los errores respecto
-		# 	al modelo.
-		# ε ~ N(0, σₑ²)
-		ε = rand(Normal(0, σₑ), n)
-
-		# Se construyen los valores de y a través de una expresión lineal.
-		# 	`.+` es necesario porque sumaremos un escalar (3) con un vector (x).
-		# Relación Verdadera (Poblacional): Y = 3 + 1 ⋅ X + ε
-		y = 3 .+ x + ε
-
-		# Devolvemos un marco de datos con las variables generadas. En este caso,
-		# 	es necesario el `;` para que las variables del marco usen el mismo nombre
-		# 	que las variables que le estamos pasando.
-		return DataFrame(; x, ε, y)
-	end
-
-	# Generamos un marco de datos llamado `datos` y le asignamos los valores 
-	# 	producidos por la función. En este caso, `n`, `μₓ`, `σₓ` y `\epsilon`
-	# 	vienen dados por los elementos interactivos de abajo.
-	datos = generar_poblacion(n, μₓ, σₓ, σₑ);
-	```
-	"""
-else
-	md"""
-	```julia
-	function generar_poblacion(n, μₓ, σₓ, σₑ)		
-		x = rand(Normal(μₓ, σₓ), n)
-		ε = rand(Normal(0, σₑ), n)
-		y = 3 .+ x + ε
-		
-		return DataFrame(; x, ε, y)
-	end
-
-	datos = generar_poblacion(n, μₓ, σₓ, σₑ);
-	```
-	"""
-end
-
-# ╔═╡ f2233810-4de0-43ae-89de-fe134381be9d
-md"""
-Los siguientes elementos interactivos te permiten modificar los parámetros poblacionales a tu gusto.
-"""
-
-# ╔═╡ 18dff3f3-5be8-4e66-899d-911117050dda
-begin
-	reset_nb
-	Columns(
-		md"`n` $(@bind n PlutoUI.Slider(1:1000, default=500, show_value=true))",
-		md"μₓ $(@bind μₓ PlutoUI.Slider(0:0.1:20, default=10, show_value=true))"
-	)
-end
-
-# ╔═╡ edd8cfe1-7a41-4da4-86c4-de7ea6168bd3
-begin
-	reset_nb
-	Columns(
-		md"σₓ $(@bind σₓ PlutoUI.Slider(0:0.1:5, default=2.5, show_value=true))",
-		md"σₑ $(@bind σₑ PlutoUI.Slider(0:0.1:3, default=1.5, show_value=true))";
-	)
-end
-
-# ╔═╡ 7bec2766-6fd7-47ac-b09d-53a1a0ff5662
-md"""
-## La simulación
-Comenzamos el experimento definiendo una **población** de ``N = `` $n **datos** que sigue un modelo de regresión lineal verdadero, aunque desconocido para el investigador:
-```math
-Y = \beta_0 + \beta_1 X + \varepsilon
+```julia
+plot(Normal(μ, σ))
 ```
-
-* La variable independiente, $X$, sigue una distribución normal con media ``\mu =`` $(μₓ) y desviación estándar ``\sigma =`` $(σₓ).
-* La componente de error, ``\varepsilon``, sigue una distribución normal centrada en cero: ``\mathcal{N}(0, ``$(σₑ)``)``.
-* La relación verdadera que forzamos es ``Y = 3 + 1 \cdot X + \varepsilon``, es decir, ``\beta_0 = 3`` y ``\beta_1 = 1``.
-
-Debido a la naturaleza estocástica del muestreo, es difícil que los coeficientes estimados (``\hat{\beta}_0, \hat{\beta}_1``) sean exactamente ``3`` y ``1`` en una muestra finita.
-
-Para construir nuestra población utilizaremos la siguiente función:
 """
 
-# ╔═╡ 88da92d3-160a-49db-b602-070548b7c5be
-md"""
-Esta nube de puntos muestra la **dispersión** de nuestra población generada artificialmente. Esta es la "verdad" subyacente que intentaremos estimar.
-"""
-
-# ╔═╡ a1b2c3d4-0001-0000-0000-ef1234567891
-question_box(md"""
-**Antes de ver el gráfico:** Dados los parámetros que elegiste (μₓ = $(μₓ), σₓ = $(σₓ), σₑ = $(σₑ)), ¿qué tan fuerte esperás que sea la relación lineal entre ``X`` e ``Y``?
-
-¿Qué pasaría con la nube de puntos si aumentaras mucho σₑ? ¿Y si la redujeras a cero?
-""")
-
-# ╔═╡ 11d1fbbd-d4d7-43ee-9724-9e90aa691090
+# ╔═╡ 929b691c-752c-4764-a1cd-8cb10730c7c3
 begin
-    datos = generar_poblacion(n, μₓ, σₓ, σₑ)
+	StatsPlots.plot(Normal(mu, sigma),
+		legend = false,
+		xlims = (-5, 5),
+		ylims = (0, 1),
+		linewidth = 2, 
+		fill = true, 
+		alpha = 0.3)
 
-    @df datos StatsPlots.scatter(:x, :y,
-        title  = "Dispersión de la población",
-        xlabel = "Variable independiente (x)",
-        ylabel = "Variable dependiente (y)",
-        label  = "Datos de la población",
-        legend = :bottomright)
+	vline!([mu])
 end
 
-# ╔═╡ 22e7cd31-4af1-45a2-bafb-1e9b5c9bf51c
-md"""
-Ahora ajustamos MCO a nuestra población completa (``N =`` $n datos). Como ``N`` es grande, esta recta se acerca mucho a los parámetros verdaderos (``\beta_0 = 3``, ``\beta_1 = 1``), y la usaremos como referencia en la simulación.
-"""
+# ╔═╡ 718080c9-dbff-4d07-bbf8-8f20de797d70
+md"## Distribucion Uniforme"
 
-# ╔═╡ d9dd0211-fb04-40ce-92d5-f383f50093fa
-md"📎 *Mostrar comentarios en el código* $(@bind comentarios_modelo Switch(default = mostrar_comentarios))"
+# ╔═╡ 0c0d49eb-77aa-4e24-8eca-377836aa9d87
+md"a : $(@bind uniforme_a Slider(-5:0.1:-0.1, default=1.0, show_value=true))"
 
-# ╔═╡ 1deef8c7-8431-4f8f-8fd5-e5af10472a36
-if comentarios_modelo
-	md"""
-	```julia
-	# Generamos la fórmula que va a seguir nuestro modelo. En nuestro caso, 
-	# 	como se trata de una regresión lineal simple que no está forzada a pasar
-	# 	por el origen nos basta con `y ~ x`. (Para más información sobre la macro
-	# 	@formula, puede consultar la documentación de la dependencia StatsModels.jl)
-	formula = @formula(y ~ x)
+# ╔═╡ ffd33fe2-f41c-481a-a68b-9a954fbb7ff9
+md"b : $(@bind uniforme_b Slider(0.1:0.1:5.0, default=1.0, show_value=true))"
 
-	# Creamos el objeto `modelo` que no es otra cosa que un ajuste, usando como 
-	# 	parámetro:
-	# 	1. `LinearModel` para indicar que será un ajuste lineal, 
-	# 	2. `formula`, para describir el tipo de modelo lineal y
-	# 	3. `datos` que es el marco de datos previamente construido.
-	modelo = fit(LinearModel, formula, datos) 
-	
-	# Ahora estraemos del objeto `modelo` solamente los coeficientes que es lo que
-	# 	nos interesa.
-	betas = coef(modelo)
-	```
-	"""
-else
-	md"""
-	```julia
-	formula = @formula(y ~ x)
-
-	modelo = fit(LinearModel, formula, datos) 
-	betas = coef(modelo)
-	```
-	"""
-end
-
-# ╔═╡ 6c30564a-7716-4101-8be3-cb3cf51181a5
+# ╔═╡ d6e0242f-370f-424d-9b77-fe230860f488
 begin
-	formula = @formula(y ~ x)
-
-	modelo = fit(LinearModel, formula, datos) 
-	betas = coef(modelo)
-	
-	@printf "modelo de regresión poblacional (N = %d):\nIntercepto (β₀): %.4f\nPendiente (β₁): %.4f" n betas[1] betas[2]
+plot(Uniform(uniforme_a, uniforme_b), 
+	legend = false, 
+	xlims = (-6,6), ylims = (0,1),
+	linewidth = 2,
+	fill = true,
+	alpha = 0.3)
+vline!([mean(Uniform(uniforme_a, uniforme_b))])
 end
 
-# ╔═╡ a1a0704b-1163-4c92-b19d-53cbdbec6e68
+# ╔═╡ d70d210c-6088-4de6-aa6e-01bb1491408c
+md"## Distribucion Gamma"
+
+# ╔═╡ 05b757e2-ccda-4ff4-9cf7-1bd93ba478b0
+md"Alfa (α): $(@bind alpha Slider(0.1:0.1:5.0, default=1.0, show_value=true))"
+
+# ╔═╡ 03d93604-827f-49e2-82f3-94fcdda4c4e2
+md"Beta (β): $(@bind beta Slider(0.01:0.01:1.0, default=1.0, show_value=true))"
+
+# ╔═╡ 08468583-f772-47bf-8754-a9eb81e18608
 begin
-    @df datos StatsPlots.scatter(:x, :y,
-        title  = "Modelo de regresión",
-        xlabel = "Predictor (x)",
-        ylabel = "Variable dependiente (y)",
-        label  = "Datos población",
-        legend = :bottomright)
-
-    Plots.abline!(betas[2], betas[1],
-        label     = "Verdadera recta de regresión",
-        color     = :orange,
-        linewidth = 3)
+plot(Gamma(alpha, beta), 
+	legend = false, 
+	xlims = (0,1), ylims = (0, 5),
+	linewidth = 2,
+	fill = true,
+	alpha = 0.3)
+vline!([mean(Gamma(alpha, beta))])
 end
 
+# ╔═╡ dedc74cf-b944-4e83-89c9-7d8924b37740
+md"## Distribucion Beta"
 
-# ╔═╡ fc4be14e-fa68-45fa-a4f2-e3caa7434158
+# ╔═╡ e20a8e82-8f10-4f6e-af29-9c5e5a4d801b
+md"Alfa (Bα): $(@bind beta_alpha Slider(0.1:0.1:5.0, default=1.0, show_value=true))"
+
+# ╔═╡ 9c632a46-ac05-4710-9506-dc4f99222926
+md"Beta (Bβ): $(@bind beta_beta Slider(0.1:0.1:5.0, default=1.0, show_value=true))"
+
+# ╔═╡ b30ae5bc-f266-4a62-960c-79095a43cbf4
 begin
-	reset_nb
-	Columns(
-		md"Cantidad de muestras $(@bind n_repeticion PlutoUI.Slider(1:10, default=3, show_value=true))",
-		md"Tamaño de la muestra $(@bind n_muestra PlutoUI.Slider(2:50, default=25, show_value=true))"
-	)
+plot(Beta(beta_alpha, beta_beta), 
+	legend = false, 
+	xlims = (0,1), ylims = (0, 5),
+	linewidth = 2,
+	fill = true,
+	alpha = 0.3)
+vline!([mean(Beta(beta_alpha, beta_beta))])
 end
 
-# ╔═╡ 8ecc340c-7420-4acd-9d9f-048335c9ac3b
-md"""
-## El experimento de la insesgadez
+# ╔═╡ 66803f5e-ba9f-4454-99c4-9eeeec7aa538
+md"## Distribucion exponencial"
 
-Para entender la insesgadez, necesitamos distinguir entre el **estimador** (la fórmula de MCO) y la **estimación** (el resultado de esa fórmula con una muestra concreta).
+# ╔═╡ 0b090ce3-3a18-4094-919c-d75e4b06b0ce
+md"Beta (Bβ): $(@bind exponencial_beta Slider(0.01:0.01:1.0, default=1.0, show_value=true))"
 
-Tomemos $n_repeticion **muestras** de $(n_muestra) datos cada una. Cada muestra producirá una **recta muestral** (``\hat{\beta}``) distinta de la recta poblacional.
-
-El gráfico a continuación muestra:
-* La población en gris claro.
-* La recta poblacional (``\beta``) en gris oscuro.
-* Los puntos y la recta de regresión ajustada a cada una de las $n_repeticion muestras, en colores distintos.
-"""
-
-# ╔═╡ 9576643c-0b2c-4373-bc94-92e611cb3a69
-let	
-    betas_muestra = Matrix{Float64}(undef, n_repeticion, 2)
-    indices_muestra = Matrix{Int64}(undef, n_repeticion, n_muestra)
-    
-    for i in 1:n_repeticion
-        indices_muestra[i, :] = sample(1:n, min(n_muestra, n), replace=false)
-        modelo2 = lm(formula, @view datos[indices_muestra[i, :], :])
-        betas_muestra[i, :] = coef(modelo2)
-    end
-
-    p = @df datos StatsPlots.scatter(:x, :y,
-        title   = "Modelo de regresión",
-        xlabel  = "Predictor (x)",
-        ylabel  = "Variable dependiente (y)",
-        color   = :gray,
-        alpha   = 0.1,
-        label   = "Datos observados",
-        legend  = :bottomright)
-
-    Plots.abline!(betas[2], betas[1],
-        label     = "Verdadera recta de regresión",
-        color     = :gray,
-        alpha     = 0.5,
-        linewidth = 3)
-
-    for i in 1:n_repeticion
-        StatsPlots.scatter!(datos.x[indices_muestra[i, :]], 
-                 datos.y[indices_muestra[i, :]],
-                 label = false)
-
-        Plots.abline!(betas_muestra[i, 2], betas_muestra[i, 1],
-            label     = "Recta de regresión para muestra $i",
-            linewidth = 2)
-    end
-
-    p
-end
-
-
-# ╔═╡ a1b2c3d4-0002-0000-0000-ef1234567892
-question_box(md"""
-**Observá las rectas muestrales.** ¿Por qué difieren entre sí si todas provienen de la *misma* población?
-
-¿Qué parámetro del experimento controla cuánto se dispersan las rectas de una muestra a otra?
-""")
-
-# ╔═╡ a1b2c3d4-0002-0001-0000-ef1234567892
-hint(md"Pensá en el efecto del tamaño de la muestra sobre la variabilidad de ``\hat{\beta}``. ¿Qué ocurre con la dispersión cuando aumentás el tamaño de cada muestra?")
-
-# ╔═╡ a1b2c3d4-0003-0000-0000-ef1234567893
-question_box(md"""
-**Antes de correr la simulación:** Si el estimador MCO es insesgado, ¿dónde deberían concentrarse las rectas muestrales (grises) respecto a la recta poblacional (naranja)?
-
-Formulá tu predicción y luego mové los sliders para verificarla.
-""")
-
-# ╔═╡ a1b2c3d4-0003-0001-0000-ef1234567893
-hint(md"""
-Si ``\mathbb{E}[\hat{\beta}] = \beta``, el promedio de todas las rectas estimadas debería coincidir con la recta verdadera. Eso no significa que cada recta pase por ella, sino que los errores se *cancelan* entre sí al promediar.
-""")
-
-# ╔═╡ 2060f164-7a5f-4fae-9e6d-4bd86b872db5
+# ╔═╡ 260d3ebf-2ec7-40cd-b6b4-5a98f478889d
 begin
-	reset_nb
-	Columns(
-		md"Cantidad de muestras $(@bind n_repeticionb PlutoUI.Slider(1:200, default=100, show_value=true))",
-		md"Tamaño de la muestra $(@bind n_muestrab PlutoUI.Slider(2:50, default=25, show_value=true))"
-	)
+plot(Exponential(exponencial_beta), 
+	legend = false, 
+	xlims = (0,1), ylims = (0, 5),
+	linewidth = 2,
+	fill = true,
+	alpha = 0.3)
+vline!([mean(Exponential(exponencial_beta))])
 end
 
-# ╔═╡ cf78411c-acb2-4c1e-88ef-71e25846209d
-md"""
-## Entonces, ¿qué es la "insesgadez de MCO"?
+# ╔═╡ 50906917-fb79-4115-aa6b-d1722677602f
+md"## Distribucion χ²"
 
-La **insesgadez** es una propiedad teórica del estimador (la fórmula), no de la estimación que obtenemos con una sola muestra. Una sola estimación (``\hat\beta``) no puede ser insesgada, al igual que un solo disparo no puede ser insesgado.
+# ╔═╡ babb6e0c-5676-4f4f-bc9a-9861e53a6313
+md"Nu (ν): $(@bind chisq_nu Slider(1:10, default=1, show_value=true))"
 
-Para verificar la propiedad del estimador MCO, debemos simular el proceso **muchas veces**.
-
-El siguiente gráfico repite el experimento $(n_repeticionb) veces, con muestras de $(n_muestrab) puntos cada una.
-"""
-
-# ╔═╡ 58e4a5e8-1be0-4d10-ad94-5690a0b7f6e0
+# ╔═╡ 1ea1d756-ca02-44ee-a5f5-a1d47d746f17
 begin
-    betas_muestra = Matrix{Float64}(undef, n_repeticionb, 2)
-    indices_muestra = Matrix{Int64}(undef, n_repeticionb, n_muestrab)
-    
-    for i in 1:n_repeticionb
-        indices_muestra[i,:] = sample(1:n, min(n_muestrab, n), replace=false)
-        modelo2 = lm(formula, @view datos[indices_muestra[i,:], :])
-        betas_muestra[i,:] = coef(modelo2)
-    end
-
-    p = Plots.plot(
-        title   = "Modelo de regresión",
-        xlabel  = "Predictor (x)",
-        ylabel  = "Variable dependiente (y)",
-        legend  = :bottomright,
-        xlims   = (minimum(datos.x), maximum(datos.x)),
-        ylims   = (minimum(datos.y), maximum(datos.y)))
-
-    for i in 1:n_repeticionb
-        Plots.abline!(betas_muestra[i, 2], betas_muestra[i, 1],
-            label     = i == 1 ? "Rectas de regresión muestrales" : false,
-            color     = :lightgray,
-            linewidth = 1)
-    end
-
-    Plots.abline!(betas[2], betas[1],
-        label     = "Verdadera recta de regresión",
-        color     = :orange,
-        linewidth = 3)
-
-	@df datos StatsPlots.scatter!(:x, :y,
-        label = "Datos observados",
-        color = :steelblue)
-
-
-    p
+plot(Chisq(chisq_nu), 
+	legend = false, 
+	xlims = (0,10), ylims = (0, 0.3),
+	linewidth = 2,
+	fill = true,
+	alpha = 0.3)
+vline!([mean(Chisq(chisq_nu))])
 end
-
-
-# ╔═╡ 46f4ccd8-25c6-4ab3-9346-b8267f95f24f
-md"""
-## El resultado y la conclusión
-
-### Demostración visual
-Insesgado significa que, si promediamos todas las **rectas muestrales** (las $n_repeticionb rectas grises), el promedio **acierta** a la **recta poblacional** (la naranja).
-
-### La propiedad del estimador
-La insesgadez es una **propiedad de la fórmula de MCO** (el rifle), no de la estimación individual que te toca (el disparo).
-
-* El estimador MCO es **justo**; no favorece sistemáticamente ninguna dirección.
-* Ante la incertidumbre de qué muestra te tocará, conviene apostar por la fórmula insesgada.
-
-### Más allá de la insesgadez
-Para que la estimación sea **precisa**, no basta con la insesgadez; debemos considerar la **varianza** (qué tan dispersas están las rectas muestrales). Menor varianza implica mayor precisión.
-
-La insesgadez no se puede ver en una sola salida de regresión. La propiedad se estudia analizando la **fórmula** matemática.
-
-> **Nota:** la insesgadez de MCO no es incondicional. Depende de supuestos como la exogeneidad del error (``\mathbb{E}[\varepsilon \mid X] = 0``), la homocedasticidad y la ausencia de multicolinealidad perfecta. Cuando se cumplen, MCO es además el estimador lineal insesgado de mínima varianza (teorema de Gauss-Markov).
-"""
-
-# ╔═╡ 2a801149-7196-4db1-b06a-9333d1788b23
-begin
-	reset_nb
-	Columns(
-		md"Cantidad de muestras $(@bind n_repeticionc PlutoUI.Slider(1:5000, default=1000, show_value=true))",
-		md"Tamaño de la muestra $(@bind n_muestrac PlutoUI.Slider(2:50, default=25, show_value=true))"
-	)
-end
-
-# ╔═╡ f9245aaf-e3d4-4f12-824b-6d08b0017c00
-md"""
-## La aproximación
-
-El siguiente gráfico muestra la **media progresiva** de las estimaciones: después de cada muestra de $(n_muestrac) puntos, se calcula el promedio acumulado de todos los ``\hat\beta`` obtenidos hasta ese momento. Si MCO es insesgado, esa media debería converger a los parámetros verdaderos ``\beta_0 = 3`` y ``\beta_1 = 1`` a medida que crece el número de repeticiones.
-"""
-
-# ╔═╡ 64d046b3-3a93-4bc0-b869-694c7dbbe0ef
-let
-    betas_muestra = Matrix{Float64}(undef, n_repeticionc, 2) 
-    indices_muestra = Matrix{Int64}(undef, n_repeticionc, n_muestrac)
-    
-    for i in 1:n_repeticionc
-        indices_muestra[i,:] = sample(1:n, min(n_muestrac, n), replace=false)
-        modelo = lm(formula, @view datos[indices_muestra[i,:], :])
-        betas_muestra[i,:] = coef(modelo)
-    end
-    
-    beta_progresivo = cumsum(betas_muestra, dims = 1) ./ (1:n_repeticionc)
-    
-    p1 = Plots.plot(1:n_repeticionc, beta_progresivo[:,1],
-        title   = "Tendencia de β̂₀",
-        xlabel  = "Cantidad de muestras",
-        ylabel  = "Media de la estimación",
-        label   = "Media progresiva de β̂₀",
-        color   = :black,
-        legend  = :bottomright,
-	   ylims   = (betas[1] - 1, betas[1] + 1))
-    
-    StatsPlots.hline!(p1, [betas[1]],
-        label     = "β₀ = $(round(betas[1], digits = 2))",
-        linewidth = 2)
-    
-    p2 = Plots.plot(1:n_repeticionc, beta_progresivo[:,2],
-        title   = "Tendencia de β̂₁",
-        xlabel  = "Cantidad de muestras",
-        ylabel  = "Media de la estimación",
-        label   = "Media progresiva de β̂₁",
-        color   = :black,
-        legend  = :bottomright,
-	   ylims   = (betas[2] - 0.5, betas[2] + 0.5))
-    
-    StatsPlots.hline!(p2, [betas[2]],
-        label     = "β₁ = $(round(betas[2], digits = 2))",
-        linewidth = 2)
-    
-    Plots.plot(p1, p2, layout = (2, 1), size = (800, 600))
-end
-
-
-# ╔═╡ a1b2c3d4-0004-0000-0000-ef1234567894
-question_box(md"""
-**Interpretá el resultado:**
-
-1. ¿Qué le pasa a la media progresiva de ``\hat{\beta}_0`` y ``\hat{\beta}_1`` a medida que aumentás el número de repeticiones?
-2. ¿Qué efecto tiene aumentar el *tamaño* de cada muestra sobre la **velocidad** de convergencia?
-3. ¿Podría un estimador *sesgado* mostrar el mismo comportamiento? ¿Qué lo diferenciaría visualmente en este gráfico?
-""")
-
-# ╔═╡ a1b2c3d4-0004-0001-0000-ef1234567894
-hint(md"""
-El teorema de **Gauss-Markov** garantiza algo más que insesgadez: entre todos los estimadores lineales insesgados, MCO tiene **mínima varianza**. Esto se relaciona con qué tan rápido converge la media progresiva y con cuánto "ruido" ves en las curvas negras.
-
-Un estimador sesgado convergiría, pero a un valor *distinto* de la línea horizontal (el parámetro verdadero).
-""")
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
-DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
-GLM = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
-PlutoTeachingTools = "661c6b06-c737-4d37-b85c-46df65de6f69"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
-StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 
 [compat]
-DataFrames = "~1.8.1"
-GLM = "~1.9.3"
-PlutoTeachingTools = "~0.4.7"
+Distributions = "~0.25.124"
 PlutoUI = "~0.7.80"
-StatsBase = "~0.34.10"
 StatsPlots = "~0.15.8"
 """
 
@@ -557,7 +169,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "8089e70c0dcece92c41f2b60a8a452f2af4ee2c1"
+project_hash = "737ccb49ce61791a7d6b5355cf0f37d020c3de49"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -725,21 +337,10 @@ git-tree-sha1 = "439e35b0b36e2e5881738abc8857bd92ad6ff9a8"
 uuid = "d38c429a-6771-53c6-b99e-75d170b6e991"
 version = "0.6.3"
 
-[[deps.Crayons]]
-git-tree-sha1 = "249fe38abf76d48563e2f4556bebd215aa317e15"
-uuid = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
-version = "4.1.1"
-
 [[deps.DataAPI]]
 git-tree-sha1 = "abe83f3a2f1b857aac70ef8b269080af17764bbe"
 uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
 version = "1.16.0"
-
-[[deps.DataFrames]]
-deps = ["Compat", "DataAPI", "DataStructures", "Future", "InlineStrings", "InvertedIndices", "IteratorInterfaceExtensions", "LinearAlgebra", "Markdown", "Missings", "PooledArrays", "PrecompileTools", "PrettyTables", "Printf", "Random", "Reexport", "SentinelArrays", "SortingAlgorithms", "Statistics", "TableTraits", "Tables", "Unicode"]
-git-tree-sha1 = "d8928e9169ff76c6281f39a659f9bca3a573f24c"
-uuid = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
-version = "1.8.1"
 
 [[deps.DataStructures]]
 deps = ["OrderedCollections"]
@@ -893,22 +494,11 @@ git-tree-sha1 = "7a214fdac5ed5f59a22c2d9a885a16da1c74bbc7"
 uuid = "559328eb-81f9-559d-9380-de523a88c83c"
 version = "1.0.17+0"
 
-[[deps.Future]]
-deps = ["Random"]
-uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
-version = "1.11.0"
-
 [[deps.GLFW_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libglvnd_jll", "Xorg_libXcursor_jll", "Xorg_libXi_jll", "Xorg_libXinerama_jll", "Xorg_libXrandr_jll", "libdecor_jll", "xkbcommon_jll"]
 git-tree-sha1 = "9e0fb9e54594c47f278d75063980e43066e26e20"
 uuid = "0656b61e-2033-5cc2-a64a-77c0f6c09b89"
 version = "3.4.1+1"
-
-[[deps.GLM]]
-deps = ["Distributions", "LinearAlgebra", "Printf", "Reexport", "SparseArrays", "SpecialFunctions", "Statistics", "StatsAPI", "StatsBase", "StatsFuns", "StatsModels"]
-git-tree-sha1 = "3bcb30438ee1655e3b9c42d97544de7addc9c589"
-uuid = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
-version = "1.9.3"
 
 [[deps.GR]]
 deps = ["Artifacts", "Base64", "DelimitedFiles", "Downloads", "GR_jll", "HTTP", "JSON", "Libdl", "LinearAlgebra", "Preferences", "Printf", "Qt6Wayland_jll", "Random", "Serialization", "Sockets", "TOML", "Tar", "Test", "p7zip_jll"]
@@ -993,19 +583,6 @@ git-tree-sha1 = "0ee181ec08df7d7c911901ea38baf16f755114dc"
 uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
 version = "1.0.0"
 
-[[deps.InlineStrings]]
-git-tree-sha1 = "8f3d257792a522b4601c24a577954b0a8cd7334d"
-uuid = "842dd82b-1e85-43dc-bf29-5d0ee9dffc48"
-version = "1.4.5"
-
-    [deps.InlineStrings.extensions]
-    ArrowTypesExt = "ArrowTypes"
-    ParsersExt = "Parsers"
-
-    [deps.InlineStrings.weakdeps]
-    ArrowTypes = "31f734f8-188a-4ce0-8406-c8a06bd891cd"
-    Parsers = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-
 [[deps.IntegerMathUtils]]
 git-tree-sha1 = "4c1acff2dc6b6967e7e750633c50bc3b8d83e617"
 uuid = "18e54dd8-cb9d-406c-a71d-865a43cbb235"
@@ -1029,11 +606,6 @@ version = "0.16.2"
     [deps.Interpolations.weakdeps]
     ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
     Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
-
-[[deps.InvertedIndices]]
-git-tree-sha1 = "6da3c4316095de0f5ee2ebd875df8721e7e0bdbe"
-uuid = "41ab1584-1d38-5bbf-9106-f11c6c58b48f"
-version = "1.3.1"
 
 [[deps.IrrationalConstants]]
 git-tree-sha1 = "b2d91fe939cae05960e760110b328288867b5758"
@@ -1428,23 +1000,11 @@ version = "1.41.6"
     ImageInTerminal = "d8c32880-2388-543b-8c61-d9f865259254"
     Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
-[[deps.PlutoTeachingTools]]
-deps = ["Downloads", "HypertextLiteral", "Latexify", "Markdown", "PlutoUI"]
-git-tree-sha1 = "90b41ced6bacd8c01bd05da8aed35c5458891749"
-uuid = "661c6b06-c737-4d37-b85c-46df65de6f69"
-version = "0.4.7"
-
 [[deps.PlutoUI]]
 deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "Downloads", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
 git-tree-sha1 = "fbc875044d82c113a9dee6fc14e16cf01fd48872"
 uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 version = "0.7.80"
-
-[[deps.PooledArrays]]
-deps = ["DataAPI", "Future"]
-git-tree-sha1 = "36d8b4b899628fb92c2749eb488d884a926614d3"
-uuid = "2dfb63ee-cc39-5dd5-95bd-886bf059d720"
-version = "1.4.3"
 
 [[deps.PrecompileTools]]
 deps = ["Preferences"]
@@ -1457,18 +1017,6 @@ deps = ["TOML"]
 git-tree-sha1 = "8b770b60760d4451834fe79dd483e318eee709c4"
 uuid = "21216c6a-2e73-6563-6e65-726566657250"
 version = "1.5.2"
-
-[[deps.PrettyTables]]
-deps = ["Crayons", "LaTeXStrings", "Markdown", "PrecompileTools", "Printf", "REPL", "Reexport", "StringManipulation", "Tables"]
-git-tree-sha1 = "624de6279ab7d94fc9f672f0068107eb6619732c"
-uuid = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
-version = "3.3.2"
-
-    [deps.PrettyTables.extensions]
-    PrettyTablesTypstryExt = "Typstry"
-
-    [deps.PrettyTables.weakdeps]
-    Typstry = "f0ed7684-a786-439e-b1e3-3b82803b501e"
 
 [[deps.Primes]]
 deps = ["IntegerMathUtils"]
@@ -1614,11 +1162,6 @@ deps = ["Distributed", "Mmap", "Random", "Serialization"]
 uuid = "1a1011a3-84de-559e-8e89-a11a2f7dc383"
 version = "1.11.0"
 
-[[deps.ShiftedArrays]]
-git-tree-sha1 = "503688b59397b3307443af35cd953a13e8005c16"
-uuid = "1277b4bf-5013-50f5-be3d-901d8477a67a"
-version = "2.0.0"
-
 [[deps.Showoff]]
 deps = ["Dates", "Grisu"]
 git-tree-sha1 = "91eddf657aca81df9ae6ceb20b959ae5653ad1de"
@@ -1713,23 +1256,11 @@ version = "1.5.2"
     ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
     InverseFunctions = "3587e190-3f89-42d0-90ee-14403ec27112"
 
-[[deps.StatsModels]]
-deps = ["DataAPI", "DataStructures", "LinearAlgebra", "Printf", "REPL", "ShiftedArrays", "SparseArrays", "StatsAPI", "StatsBase", "StatsFuns", "Tables"]
-git-tree-sha1 = "08786db4a1346d17d0a8d952d2e66fd00fa18192"
-uuid = "3eaba693-59b7-5ba5-a881-562e759f1c8d"
-version = "0.7.9"
-
 [[deps.StatsPlots]]
 deps = ["AbstractFFTs", "Clustering", "DataStructures", "Distributions", "Interpolations", "KernelDensity", "LinearAlgebra", "MultivariateStats", "NaNMath", "Observables", "Plots", "RecipesBase", "RecipesPipeline", "Reexport", "StatsBase", "TableOperations", "Tables", "Widgets"]
 git-tree-sha1 = "88cf3587711d9ad0a55722d339a013c4c56c5bbc"
 uuid = "f3b207a7-027a-5e70-b257-86293d7955fd"
 version = "0.15.8"
-
-[[deps.StringManipulation]]
-deps = ["PrecompileTools"]
-git-tree-sha1 = "d05693d339e37d6ab134c5ab53c29fce5ee5d7d5"
-uuid = "892a3eda-7b42-436c-8928-eab12a02cf0e"
-version = "0.4.4"
 
 [[deps.StructUtils]]
 deps = ["Dates", "UUIDs"]
@@ -2132,42 +1663,31 @@ version = "1.13.0+0"
 """
 
 # ╔═╡ Cell order:
-# ╟─0fb9b39c-9fc8-4659-bd31-a53e28ea0035
-# ╟─96d9684f-1daa-4309-88a8-d8e54666c82d
-# ╟─c73a95bb-7520-4dd2-a756-2ea4e428f88b
-# ╟─7a92b92e-25fc-4fcd-8a3a-510cfe419006
-# ╟─811a97ae-64d4-4243-afd5-ba322a4472b5
-# ╟─34c6f27f-c56e-4409-bdf6-d5f543fdff6f
-# ╟─d1cbe04e-c09e-48b2-97ca-7eb0dce7e3f6
-# ╟─7bec2766-6fd7-47ac-b09d-53a1a0ff5662
-# ╟─0e524340-6ce7-4405-a1ef-247a675cde9f
-# ╟─563fed55-8802-407c-ac93-85f56c717ea4
-# ╟─f2233810-4de0-43ae-89de-fe134381be9d
-# ╟─18dff3f3-5be8-4e66-899d-911117050dda
-# ╟─edd8cfe1-7a41-4da4-86c4-de7ea6168bd3
-# ╟─88da92d3-160a-49db-b602-070548b7c5be
-# ╟─a1b2c3d4-0001-0000-0000-ef1234567891
-# ╟─11d1fbbd-d4d7-43ee-9724-9e90aa691090
-# ╟─22e7cd31-4af1-45a2-bafb-1e9b5c9bf51c
-# ╟─d9dd0211-fb04-40ce-92d5-f383f50093fa
-# ╟─1deef8c7-8431-4f8f-8fd5-e5af10472a36
-# ╟─6c30564a-7716-4101-8be3-cb3cf51181a5
-# ╟─a1a0704b-1163-4c92-b19d-53cbdbec6e68
-# ╟─8ecc340c-7420-4acd-9d9f-048335c9ac3b
-# ╟─fc4be14e-fa68-45fa-a4f2-e3caa7434158
-# ╟─9576643c-0b2c-4373-bc94-92e611cb3a69
-# ╟─a1b2c3d4-0002-0000-0000-ef1234567892
-# ╟─a1b2c3d4-0002-0001-0000-ef1234567892
-# ╟─cf78411c-acb2-4c1e-88ef-71e25846209d
-# ╟─a1b2c3d4-0003-0000-0000-ef1234567893
-# ╟─a1b2c3d4-0003-0001-0000-ef1234567893
-# ╟─2060f164-7a5f-4fae-9e6d-4bd86b872db5
-# ╟─58e4a5e8-1be0-4d10-ad94-5690a0b7f6e0
-# ╟─46f4ccd8-25c6-4ab3-9346-b8267f95f24f
-# ╟─f9245aaf-e3d4-4f12-824b-6d08b0017c00
-# ╟─2a801149-7196-4db1-b06a-9333d1788b23
-# ╟─64d046b3-3a93-4bc0-b869-694c7dbbe0ef
-# ╟─a1b2c3d4-0004-0000-0000-ef1234567894
-# ╟─a1b2c3d4-0004-0001-0000-ef1234567894
+# ╟─8c759a6e-382c-11f1-84e0-c38cddbc3935
+# ╟─2add8de8-1822-444a-a1e7-692d58bbeae5
+# ╠═8730ee14-2daf-4a9b-9461-693cbd2bdc52
+# ╟─469ea16e-2cef-48c1-8c6e-32d182cb5a4f
+# ╟─90ca68cc-0901-49dc-b5a8-a792fe87fd2f
+# ╟─72627f6f-4fab-4026-b7fd-0303922c4ef0
+# ╟─a44abb2b-0432-4292-81d6-7328aca816f9
+# ╟─929b691c-752c-4764-a1cd-8cb10730c7c3
+# ╟─718080c9-dbff-4d07-bbf8-8f20de797d70
+# ╟─0c0d49eb-77aa-4e24-8eca-377836aa9d87
+# ╟─ffd33fe2-f41c-481a-a68b-9a954fbb7ff9
+# ╟─d6e0242f-370f-424d-9b77-fe230860f488
+# ╟─d70d210c-6088-4de6-aa6e-01bb1491408c
+# ╟─05b757e2-ccda-4ff4-9cf7-1bd93ba478b0
+# ╟─03d93604-827f-49e2-82f3-94fcdda4c4e2
+# ╟─08468583-f772-47bf-8754-a9eb81e18608
+# ╟─dedc74cf-b944-4e83-89c9-7d8924b37740
+# ╟─e20a8e82-8f10-4f6e-af29-9c5e5a4d801b
+# ╟─9c632a46-ac05-4710-9506-dc4f99222926
+# ╟─b30ae5bc-f266-4a62-960c-79095a43cbf4
+# ╟─66803f5e-ba9f-4454-99c4-9eeeec7aa538
+# ╟─0b090ce3-3a18-4094-919c-d75e4b06b0ce
+# ╟─260d3ebf-2ec7-40cd-b6b4-5a98f478889d
+# ╟─50906917-fb79-4115-aa6b-d1722677602f
+# ╟─babb6e0c-5676-4f4f-bc9a-9861e53a6313
+# ╟─1ea1d756-ca02-44ee-a5f5-a1d47d746f17
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
