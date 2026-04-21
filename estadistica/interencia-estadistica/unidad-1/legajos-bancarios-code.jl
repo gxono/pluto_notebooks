@@ -28,7 +28,7 @@ end
 md"## Los legajos"
 
 # ╔═╡ 965f51e0-d0f0-4bb1-8f7b-dc6f6790c495
-riesgos = (bajo = 5, moderado = 4, alto = 3)
+riesgos = (bajo = 6, moderado = 4, alto = 3)
 
 # ╔═╡ bcfa91e7-c31a-4c9d-8e22-fafbd4e533b5
 legajos = [Legajo(riesgo)
