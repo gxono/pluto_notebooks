@@ -350,6 +350,9 @@ else
 	eval(Markdown.parse(cadena))
 end
 
+# ╔═╡ 88a393fe-462c-454a-9184-d5646f4aa1d9
+@info repeticiones
+
 # ╔═╡ a55084f2-bc32-4426-8e13-4cc921dbe3a1
 begin
 #Esta es la muestra
@@ -383,9 +386,6 @@ for x in 0:2
 	end
 end
 end
-
-# ╔═╡ 88a393fe-462c-454a-9184-d5646f4aa1d9
-@info repeticiones
 
 # ╔═╡ 48f53ade-5cb7-4c26-bd9c-ff1f52deb15d
 [espacio_muestral_fig_dic[muestra] for muestra in repeticiones]
@@ -972,7 +972,7 @@ end
 
 # ╔═╡ ff2c4c85-0271-4a19-a788-da244841cade
 md"""
-## Código completa
+## Código completo
 """
 
 # ╔═╡ c6073ef1-fc7e-49f1-87dd-13df6b1eeeff
@@ -2799,7 +2799,7 @@ version = "4.1.0+0"
 """
 
 # ╔═╡ Cell order:
-# ╟─6bd55ed0-3a7b-11f1-8062-63c10cf6b4da
+# ╠═6bd55ed0-3a7b-11f1-8062-63c10cf6b4da
 # ╟─65df9f25-d36c-407f-aa18-f7b807c0061c
 # ╟─ed68294f-d48e-4803-9620-8ab0dcff10d6
 # ╟─2130a154-f8cd-4330-9dfa-5849c27efd84
