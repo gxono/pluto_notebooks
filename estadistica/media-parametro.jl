@@ -253,7 +253,7 @@ En el gráfico se aprecia que la media progresiva comienza con cierta variabilid
 1. La media muestral se distribuye alrededor de la media poblacional (no presenta sesgo sistemático).
 2. A medida que usamos más información (más muestras), el promedio de las medias muestrales se aproxima al valor verdadero de la media de la población, reduciendo la variabilidad.
 
-En conjunto, esta simulación apoya la idea de que la media muestral es un buen estimador de la media poblacional: es insesgado y, al aumentar el tamaño de la muestra o la cantidad de muestras, las estimaciones se concentran cada vez más cerca del valor verdadero.
+En conjunto, esta simulación apoya la idea de que la media muestral es un buen estimador de la media poblacional: es insesgado y, al aumentar el tamaño de la muestra o la cantidad de muestras, las estimaciones se concentran cada vez más cerca del valor verdadero. 
 """
 
 # ╔═╡ Cell order:
