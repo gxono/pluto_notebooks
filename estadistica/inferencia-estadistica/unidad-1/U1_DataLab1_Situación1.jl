@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.24
+# v1.0.1
 
 using Markdown
 using InteractiveUtils
@@ -16,7 +16,7 @@ macro bind(def, element)
     #! format: on
 end
 
-# ╔═╡ b4f5a023-3bda-428a-97c8-e6841afb6110
+# ╔═╡ cf7433f0-5ee5-4aa9-b35a-d04d8a9c4aeb
 begin
 # Recordar hacer un .bat para preinstalar los paquetes antes de la clase.
 using Pkg
@@ -33,7 +33,9 @@ using CairoMakie
 using PlutoTeachingTools
 using PlutoUI
 import PlutoUI: Slider
-
+md"""
+# Dependencias del proyecto
+"""
 end
 
 # ╔═╡ 2896d00e-fa9a-4a0d-b7bf-a629a81f49d6
@@ -104,6 +106,10 @@ function crxy(repeticiones, x, y)
 	sum(es_muestra_xy.(repeticiones, x, y))
 end
 
+function es_no_critica(muestra)
+	count(l -> l.tipo == :medio || l.tipo == :alto, muestra) < 2
+end
+
 end;
 
 # ╔═╡ 2ce6b9dc-429d-40f0-a030-8de4f5e23823
@@ -129,11 +135,13 @@ Una entidad bancaria está revisando una muestra aleatoria de 2 legajos de prés
 4 de "Riesgo Moderado"
 3 de "Riesgo Alto”
 Si la muestra contiene a lo sumo un expediente de Riesgo Moderado o Alto, se considera “no crítica”. Determinar la probabilidad de que la muestra sea calificada de esa forma.
-
 """
 
+# ╔═╡ e644c2fa-8e7b-417f-b539-c9928c4ad5ca
+TableOfContents()
+
 # ╔═╡ 9b5a4813-53cf-433f-95b6-124b921798b6
-md"**Los expedientes**"
+md"## Los expedientes"
 
 # ╔═╡ a177bdd2-7a84-49de-b299-ee19402f59ee
 begin
@@ -150,14 +158,7 @@ end
 
 # ╔═╡ 5fac0cef-500c-4304-9aab-5978d996129e
 md"""
-**Espacio muestral** que se genera al tomar una muestra al azar de tamaño 2 y observar los valores de **X** e **Y**  
-
-**Definición de las variables aleatorias:**  
-
-**X** = Cantidad de expedientes calificados como **Riesgo Moderado**  
-
-**Y** = Cantidad de expedientes calificados como **Riesgo Alto**    
-"""
+El *espacio muestral* que se genera al tomar una muestra al azar de tamaño 2 y observar los valores de ``X`` e ``Y`` puede verse a continuación"""
 
 # ╔═╡ 993fc6c4-3c72-46b8-af81-db287e35b4ae
 begin
@@ -165,8 +166,17 @@ begin
 	@info "Espacio muestral:" dibujar_muestra.(espacio_muestral; escala = 1.5)
 end
 
+# ╔═╡ 8c5a59a8-6433-4c6f-a66b-6d68c67b30c4
+md"""
+## Definición de las variables aleatorias:
+
+``X`` = Cantidad de expedientes calificados como *Riesgo Moderado*
+
+``Y`` = Cantidad de expedientes calificados como *Riesgo Alto*    
+"""
+
 # ╔═╡ 1bd1b2ed-a40d-4677-982d-cc11295da856
-md"**Distribución de frecuencias** al tomar **K** muestras aleatorias"
+md"*Distribución de frecuencias* al tomar ``K`` muestras aleatorias"
 
 # ╔═╡ 2fee719b-77a1-4f0b-a725-d45e6886cb6f
 @bind repeticion_n Slider(1:1000, show_value=true, default=10)
@@ -174,7 +184,7 @@ md"**Distribución de frecuencias** al tomar **K** muestras aleatorias"
 # ╔═╡ a55084f2-bc32-4426-8e13-4cc921dbe3a1
 begin
 #Esta es la muestra
-repeticiones = sample(espacio_muestral, repeticion_n; replace = true, ordered = true)
+repeticiones = sample(espacio_muestral, repeticion_n; replace = true)
 
 #La tabla de frecuencias, para ya tenerla. (esta es la de cada obs. del espacio)
 repeticiones_freq = let r = countmap(repeticiones)
@@ -257,62 +267,89 @@ begin
 	end
 
 	# 3. Estructura de la tabla
-	header = "| ``f(X,Y)`` | **Y = 0** | **Y = 1** | **Y = 2** | **P(X = x)** |"
+	header = "| ``f(X,Y)`` | ``Y = 0`` | ``Y = 1`` | ``Y = 2`` | ``P(X = x)`` |"
 	sep    = "|:---:|:---:|:---:|:---:|:---:|"
 	filas  = [
-		"| **X = $(x-1)** | $(fmt(freqxy[x, 1])) | $(fmt(freqxy[x, 2])) | $(fmt(freqxy[x, 3])) | $(fmt(sum(freqxy[x, :]))) |"
+		"| ``X = $(x-1)`` | $(fmt(freqxy[x, 1])) | $(fmt(freqxy[x, 2])) | $(fmt(freqxy[x, 3])) | $(fmt(sum(freqxy[x, :]))) |"
 		for x in 1:3
 	]
-	pie    = "| **P(Y = y)** | $(fmt(sum(freqxy[:, 1]))) | $(fmt(sum(freqxy[:, 2]))) | $(fmt(sum(freqxy[:, 3]))) | **1** |"
+	pie    = "| ``P(Y = y)`` | $(fmt(sum(freqxy[:, 1]))) | $(fmt(sum(freqxy[:, 2]))) | $(fmt(sum(freqxy[:, 3]))) | ``1`` |"
 
 	# 4. Renderizado final con Markdown
 	Markdown.parse("""
-	**Tabla de distribución de frecuencias conjunta** ``P(X = x,\\, Y = y)``
+	## Tabla de distribución de frecuencias conjunta ``P(X = x, Y = y)``
 
 	$(join([header, sep, filas..., pie], "\n"))
 
 	---
-	**Resultado del cálculo de probabilidad empírica:**
+	- Resultado del cálculo de probabilidad empírica: La suma ``f(0,0) + f(0,1) + f(1,0)`` es ``$(fmt(suma_absoluta)) \\approx $(round(valor_suma, digits=4))``.
 	
-	La suma ``f(0,0) + f(0,1) + f(1,0)`` es **$(fmt(suma_absoluta))** (≈ $(round(valor_suma, digits=4))).
-	
-	**Valor de probabilidad teórica ≈0,6818**
+	- Valor de probabilidad teórica ``≈ 0.6818``
 	""")
 end
 
 # ╔═╡ d55da34e-c1f6-4f5b-b894-1ca7ca3eff80
 md"""
-**Tabla de distribución conjunta de PROBABILIDAD**  
+## Tabla de distribución conjunta de probabilidad
 
-"""
-
-# ╔═╡ 598fda1a-3df6-4699-983f-4853bc88de12
-md"""
-| $f(X,Y)$ | $Y=0$ | $Y=1$ | $Y=2$ | **P(X = x)** |
+| ``f(X,Y)`` | ``Y=0`` | ``Y=1`` | ``Y=2`` | ``P(X = x)`` |
 | :--- | :---: | :---: | :---: | :---: |
-| **$X=0$** | $10/66$ | $15/66$ | $3/66$ | **$28/66$** |
-| **$X=1$** | $20/66$ | $12/66$ | $0$ | **$32/66$** |
-| **$X=2$** | $6/66$ | $0$ | $0$ | **$6/66$** |
-| **P(Y = y)** | **$36/66$** | **$27/66$** | **$3/66$** | **$66/66$** |
+| ``X=0`` | $10/66$ | $15/66$ | $3/66$ | **$28/66$** |
+| ``X=1`` | $20/66$ | $12/66$ | $0$ | **$32/66$** |
+| ``X=2`` | $6/66$ | $0$ | $0$ | **$6/66$** |
+| ``P(Y = y)`` | $36/66$ | $27/66$ | $3/66$ | $66/66$ |
 """
+
+# ╔═╡ ba812b29-e0b4-40d6-be41-9e71fed7c434
+let
+	cum_freq = Vector{Float64}(undef, repeticion_n)
+	cum_freq[1] = es_no_critica(repeticiones[1])
+
+	curr_qty::Float64 = cum_freq[1]
+	for i in 2:length(repeticiones) #mas eficiente que calcular para cada muestra
+		curr_qty = curr_qty + es_no_critica(repeticiones[i])
+		cum_freq[i] = curr_qty / i
+	end
+
+	frecuencia_verdadera = 45//66
+
+	num::Int64    = numerator(frecuencia_verdadera)
+	den::Int64    = denominator(frecuencia_verdadera)
+	
+	
+	fig = Figure(size = (700, 400))
+	ax = Axis(fig[1,1],
+			xlabel = "Número de muestra tomada",
+			ylabel = "Frecuencia relativa",
+			title = "Frecuencia relativa de legajos \"no críticos\" por número de muestra")
+
+	hlines!(ax, frecuencia_verdadera, color = :red, label = "Frecuencia verdadera (≈ 0.6818)")
+	lines!(ax, eachindex(repeticiones), cum_freq, label = "Frecuencia experimental")
+
+	axislegend(ax, position=:rb)
+
+	fig
+end
 
 # ╔═╡ Cell order:
 # ╟─2896d00e-fa9a-4a0d-b7bf-a629a81f49d6
-# ╟─b4f5a023-3bda-428a-97c8-e6841afb6110
 # ╟─2ce6b9dc-429d-40f0-a030-8de4f5e23823
 # ╟─24276ebf-5d60-4342-8091-f13b02c549f2
 # ╟─0719dfbd-0501-40f3-80ee-615615f56fd6
 # ╟─2953ee77-5d8f-4e4d-b2fa-689ab51dd045
+# ╟─e644c2fa-8e7b-417f-b539-c9928c4ad5ca
 # ╟─9b5a4813-53cf-433f-95b6-124b921798b6
 # ╟─a177bdd2-7a84-49de-b299-ee19402f59ee
 # ╟─5fac0cef-500c-4304-9aab-5978d996129e
 # ╟─993fc6c4-3c72-46b8-af81-db287e35b4ae
+# ╟─8c5a59a8-6433-4c6f-a66b-6d68c67b30c4
 # ╟─1bd1b2ed-a40d-4677-982d-cc11295da856
 # ╟─2fee719b-77a1-4f0b-a725-d45e6886cb6f
-# ╟─a55084f2-bc32-4426-8e13-4cc921dbe3a1
+# ╠═a55084f2-bc32-4426-8e13-4cc921dbe3a1
 # ╟─172348ff-d7ff-47e1-a459-71069f5d6252
 # ╟─9692cc0a-a5c8-4aab-9981-bdd158bf259c
 # ╟─0be96aa0-61ff-4d9a-861a-b9be4a5a1bd9
 # ╟─21cedb47-c1e5-41c2-9729-587a55a98c0e
 # ╟─d55da34e-c1f6-4f5b-b894-1ca7ca3eff80
-# ╟─598fda1a-3df6-4699-983f-4853bc88de12
+# ╟─ba812b29-e0b4-40d6-be41-9e71fed7c434
+# ╟─cf7433f0-5ee5-4aa9-b35a-d04d8a9c4aeb
