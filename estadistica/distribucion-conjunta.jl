@@ -77,7 +77,7 @@ Definimos dos variables aleatorias sobre el espacio muestral (seleccionar 2 lega
 - ``X`` = número de expedientes de **Riesgo Moderado** seleccionados → ``X \in \{0, 1, 2\}``
 - ``Y`` = número de expedientes de **Riesgo Alto** seleccionados → ``Y \in \{0, 1, 2\}``
 
-Notar que ``X + Y \leq 2``, ya que la muestra tiene tamaño 2. Los expedientes restantes son de Riesgo Bajo.
+Note que ``X + Y \leq 2``, ya que la muestra tiene tamaño 2. Los expedientes restantes son de Riesgo Bajo.
 
 La condición de muestra **"no crítica"** equivale a ``X + Y \leq 1``.
 """

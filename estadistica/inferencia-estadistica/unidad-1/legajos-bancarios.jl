@@ -246,7 +246,7 @@ else
 end
 
 # ╔═╡ d2f23ed1-33cf-4b28-bbdf-c9444e367278
-@info legajos
+@info legajos 
 
 # ╔═╡ cfed5f07-699b-4004-82b2-b6056f2237bd
 md"""
